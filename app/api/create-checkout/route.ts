@@ -29,6 +29,18 @@ export async function POST(request: Request) {
 
     /*
     =========================
+    APP URL
+    =========================
+    */
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+    if (!appUrl) {
+      throw new Error("NEXT_PUBLIC_APP_URL is missing");
+    }
+
+    /*
+    =========================
     VERIFY AUDIT SESSION
     =========================
     */
@@ -48,7 +60,7 @@ export async function POST(request: Request) {
 
     /*
     =========================
-    CREATE STRIPE CHECKOUT
+    CREATE CHECKOUT
     =========================
     */
 
@@ -86,9 +98,9 @@ export async function POST(request: Request) {
         product: "Premium Audit",
       },
 
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/audit-success?id=${auditId}`,
+      success_url: `${appUrl}/audit-success?id=${auditId}`,
 
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/unlock-audit?id=${auditId}`,
+      cancel_url: `${appUrl}/unlock-audit?id=${auditId}`,
     });
 
     console.log("STRIPE CHECKOUT CREATED:", checkoutSession.id);
@@ -105,7 +117,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        error: "Stripe checkout creation failed",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Stripe checkout creation failed",
       },
       {
         status: 500,
