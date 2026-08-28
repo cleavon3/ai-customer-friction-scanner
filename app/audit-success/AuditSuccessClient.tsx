@@ -15,6 +15,7 @@ export default function AuditSuccessClient() {
 
   const [emailVisible, setEmailVisible] = useState(false);
 
+  const generationStarted = useRef(false);
   const checking = useRef(false);
 
   useEffect(() => {
@@ -27,6 +28,34 @@ export default function AuditSuccessClient() {
         setEmailVisible(true);
       }
     }, 5000);
+
+    async function startPremiumReport() {
+      if (generationStarted.current) return;
+
+      generationStarted.current = true;
+
+      try {
+        console.log("STARTING PREMIUM REPORT GENERATION");
+
+        const response = await fetch("/api/premium-report", {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            auditId,
+          }),
+        });
+
+        const data = await response.json();
+
+        console.log("PREMIUM REPORT RESPONSE:", data);
+      } catch (error) {
+        console.error("PREMIUM REPORT START ERROR:", error);
+      }
+    }
 
     async function checkStatus() {
       if (cancelled || checking.current) return;
@@ -58,15 +87,14 @@ export default function AuditSuccessClient() {
           );
         }
 
-        if (data.reportStatus === "pending") {
+        if (
+          data.reportStatus === "pending" ||
+          data.reportStatus === undefined
+        ) {
           setStatus("Payment confirmed. Starting your premium audit...");
         }
       } catch (error) {
         console.error("AUDIT STATUS ERROR:", error);
-
-        setStatus(
-          "Your report is being prepared. We will notify you once it is ready.",
-        );
       } finally {
         checking.current = false;
       }
@@ -76,7 +104,17 @@ export default function AuditSuccessClient() {
       }
     }
 
-    const startTimer = setTimeout(checkStatus, 5000);
+    /*
+    =========================
+    WAIT 5 SECONDS THEN START
+    =========================
+    */
+
+    const startTimer = setTimeout(async () => {
+      await startPremiumReport();
+
+      checkStatus();
+    }, 5000);
 
     return () => {
       cancelled = true;
